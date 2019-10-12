@@ -1,4 +1,4 @@
-# emotet_pws_extractor
+# Emotet powershell script extractor
 
 Quick and dirty script to extract string obfuscated powershell script from objects inside CDFv2 files (.doc files) not tested for other type of files yet.
 
