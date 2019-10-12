@@ -69,7 +69,7 @@ def main():
     total = 0
     h = 0
     parser = argparse.ArgumentParser()
-    parser.add_argument("file")
+    parser.add_argument("file", help=".doc file")
     parser.add_argument("-s", "--script", help="Output only decoded script", action="store_true")
     parser.add_argument("-a", "--all", help="Get all details", action="store_true")
     parser.add_argument("-sub", "--substring", help="print only obfuscation string", action="store_true")
