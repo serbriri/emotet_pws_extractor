@@ -1,6 +1,5 @@
 from collections import OrderedDict, Counter
 import olefile, string, base64
-import sys, unicodedata, re
 import argparse
 
 def buildStats(s):
@@ -13,61 +12,67 @@ def buildStats(s):
     return res
 
 def extractSubstring(data):
-    
-    sub1 = ''
     subj = 0
     last = ''
-    ss = ''
+    rep_ind = [0] * 10
+    resss = [0] * 5
+    count = 0
+    def_count = 0
+    cont = True
     charStatsDict = OrderedDict()
-    dd = OrderedDict()
 
-    dd = buildStats(data)
-    d = Counter(dd)
-    top10 = d.most_common(10)
-    subj = int(top10[0][1])
-    for (i, j) in top10:
-        if (subj - j) < 300:
-            sub1 += i
-        else:
-            break
-        subj = j
-    for k in dd.keys():
-        if k in sub1:
-            charStatsDict[k] = dd.keys().index(k)
+    d = Counter(buildStats(data))
+    top10 = d.most_common(10)  # Extraer los 10 caracteres mas repetidos
+    last = 'y'
+    if (top10[0][1] - top10[((len(top10)/2) - 1)][1]) > 1500:
+        for i in range(len(top10)):
+            subj = top10[i + 1][1]
+            # Controlar si se repite el caractaer o no basandose en su frecuencia
+            dif_s = top10[i][1] - subj
 
-    for i in range(1, (len(charStatsDict.values()))):
-        if (charStatsDict.values()[i] - charStatsDict.values()[i - 1]) > 1:
-            last = 'n'
-        else:
-            ss += charStatsDict.keys()[i - 1]
-            last = 'y'
+            if dif_s < 50 and cont:  # Se repite y forma parte de la substring
+                rep_ind[i] = 1
+                resss[i] = top10[i][0]
+                count += 1
+                last = 'y'
+            else:
+                count += 1
+                cont = False
+                resss[i] = top10[i][0]
+                if (top10[0][1] / 2) - subj > 300:  # Si la distancia con el caracter de substrings que no se repite es mayor de 300 consideramos
+                    # que ya no pertenece al substring
+                    break
+                else:  # rep_ind[i] = 1
+                    if last == 'y':
+                        rep_ind[i - 1] = 1
+                        rep_ind[i] = 0
 
-    if last == 'y':
-        ss += charStatsDict.keys()[i]
-    else:
-        pass     
+        rep_char = [''] * count
+        def_count = count  # contador con duplicados
+
+        for i in range(count):
+            if rep_ind[i] == 1:
+                rep_char[i] = resss[i]
+                def_count += 1
+
+    subss = ''
     data = ''.join([str(char) for char in data if char in string.printable])
-    higherValue = 0
-    for key in range(len(ss) - 1):
-        current = len(data.split(ss[key:]))
-        if current > higherValue and higherValue == 0:
-            higherValue = current
-        elif current > higherValue:
-            ss = ss[key:]
-            break
-    return ss
+
+    for char in data:
+        if (char in resss) and (def_count != 0):
+            def_count -= 1
+            subss += char
+
+    return subss
 
 def main():
     list_objects = ["Macros", "WordDocument", "Data", "1Table"]
     finalScript = ''
+    script = ''
     susp_obj = ''
     subStr = ''
     max_size = 0
-    ocurrences = 0
-    dif = 0
-    subj = 1
-    total = 0
-    h = 0
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file", help=".doc file")
     parser.add_argument("-s", "--script", help="Output only decoded script", action="store_true")
@@ -87,24 +92,28 @@ def main():
                                 continue
                     data = ole.openstream(susp_obj).read()
                     data = data.replace('\$', '')
-                    data = ''.join(data.split())
                     data = data[25:-28]
+                    data = ''.join([str(char) for char in data if char in string.printable])
                     subStr = extractSubstring(data)
+                    print(subStr)
                     finalScript = data.replace(subStr, '')
+                    print(finalScript)
                     script = base64.b64decode(finalScript)
+                    print(script)
     except:
         print("[ ERROR ]: File does not exists or is not an OLE file.")
         exit(0)
 
     if args.all:
-        print " [Obfuscation string]: %s " % subStr
-        print " [Decoded script]:\n %s " % script.replace(';',';\n')
-        
+        print(" [Obfuscation string]: %s " % subStr)
+        print(" [Decoded script]:\n %s " % script.replace(';', ';\n'))
+
     if args.script:
-        print script.replace(';',';\n')
-    
+        print(script.replace(';', ';\n'))
+
     if args.substring:
-        print subStr  
-    
-if __name__ == "__main__": 
+        print(" [Obfuscation string]: %s " % subStr)
+
+if __name__ == "__main__":
     main()
+    
